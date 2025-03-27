@@ -1,0 +1,58 @@
+{
+  "name": "product-feed-centralization",
+  "services": {
+    "backend": {
+      "image": "${EASYPANEL_USERNAME}/product-feed-backend:latest",
+      "build": {
+        "context": "./backend",
+        "dockerfile": "Dockerfile"
+      },
+      "environment": [
+        "PORT=3001",
+        "NODE_ENV=production",
+        "MONGODB_URI=${MONGODB_URI}",
+        "JWT_SECRET=${JWT_SECRET}",
+        "JWT_EXPIRES_IN=${JWT_EXPIRES_IN}",
+        "CORS_ORIGIN=${FRONTEND_URL}"
+      ],
+      "ports": [
+        "3001:3001"
+      ],
+      "volumes": [
+        "${DATA_DIR}/backend:/app/data"
+      ],
+      "restart": "unless-stopped",
+      "depends_on": [
+        "mongo"
+      ]
+    },
+    "frontend": {
+      "image": "${EASYPANEL_USERNAME}/product-feed-frontend:latest",
+      "build": {
+        "context": "./frontend",
+        "dockerfile": "Dockerfile"
+      },
+      "environment": [
+        "NEXT_PUBLIC_API_URL=${BACKEND_URL}/api"
+      ],
+      "ports": [
+        "3000:3000"
+      ],
+      "restart": "unless-stopped",
+      "depends_on": [
+        "backend"
+      ]
+    },
+    "mongo": {
+      "image": "mongo:5.0",
+      "environment": [
+        "MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}",
+        "MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}"
+      ],
+      "volumes": [
+        "${DATA_DIR}/mongo:/data/db"
+      ],
+      "restart": "unless-stopped"
+    }
+  }
+}

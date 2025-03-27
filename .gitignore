@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Next.js
+.next/
+out/
+frontend/.next/
+
+# Cache files
+**/*.pack
+**/*.pack.old
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# MongoDB data
+data/
+
+# Build files
+build/
+dist/
+backend/dist/
+backend/build/
+
+# Favicon files (optional - these can be regenerated)
+backend/public/favicons/
