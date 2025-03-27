@@ -26,7 +26,7 @@ services:
       - easypanel.expose=true
       - easypanel.expose.port=3100  # sau alt port liber
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3301  # portul expus de backend
+      - NEXT_PUBLIC_API_URL=https://bolt-dbdetest.98ak0z.easypanel.host:3301  # portul expus de backend
     volumes:
       - ./frontend:/app
       - /app/node_modules
