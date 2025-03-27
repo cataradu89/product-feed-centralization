@@ -1,0 +1,49 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    labels:
+      - easypanel.expose=true
+      - easypanel.expose.port=3101  # sau alt port liber
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongodb:27017/feedsdb
+      - JWT_SECRET=your_jwt_secret_key_change_in_production
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    labels:
+      - easypanel.expose=true
+      - easypanel.expose.port=3100  # sau alt port liber
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3301  # portul expus de backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    # Dacă nu vrei acces din afară la Mongo, nu adăuga expose
+    # Dacă vrei acces extern (pentru Compass etc.), adaugă:
+    # labels:
+    #   - easypanel.expose=true
+    #   - easypanel.expose.port=31017
+
+volumes:
+  mongodb_data:
