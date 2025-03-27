@@ -1,0 +1,62 @@
+services:
+  backend:
+    image: node:18-alpine
+    restart: always
+    command: >
+      sh -c "cd /app && 
+             apk add --no-cache git && 
+             git clone --depth 1 https://github.com/cataradu89/product-feed-centralization.git /tmp/repo && 
+             cp -r /tmp/repo/backend/* /app/ && 
+             npm install && 
+             npm start"
+    working_dir: /app
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URI=mongodb://admin:password@mongo:27017/product-feed?authSource=admin
+      - JWT_SECRET=your_strong_secret_key_here
+      - JWT_EXPIRES_IN=7d
+      - CORS_ORIGIN=https://yourdomain.easypanel.host
+    volumes:
+      - backend_data:/app/public
+    depends_on:
+      - mongo
+    labels:
+      - easypanel.expose=true
+      - easypanel.expose.port=3001
+
+  frontend:
+    image: node:18-alpine
+    restart: always
+    command: >
+      sh -c "cd /app && 
+             apk add --no-cache git && 
+             git clone --depth 1 https://github.com/cataradu89/product-feed-centralization.git /tmp/repo && 
+             cp -r /tmp/repo/frontend/* /app/ && 
+             npm install && 
+             npm run build && 
+             npm start"
+    working_dir: /app
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.yourdomain.easypanel.host/api
+    volumes:
+      - frontend_data:/app/.next
+    depends_on:
+      - backend
+    labels:
+      - easypanel.expose=true
+      - easypanel.expose.port=3000
+
+  mongo:
+    image: mongo:5.0
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+
+volumes:
+  mongo_data:
+  backend_data:
+  frontend_data:
