@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: https://github.com/cataradu89/product-feed-centralization.git#main:backend
+      nixpacks: {}
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URI=mongodb://admin:password@mongo:27017/product-feed?authSource=admin
+      - JWT_SECRET=your_strong_secret_key_here
+      - JWT_EXPIRES_IN=7d
+      - CORS_ORIGIN=https://yourdomain.easypanel.host
+    volumes:
+      - backend_data:/app/public
+    restart: always
+    depends_on:
+      - mongo
+    labels:
+      - easypanel.expose=true
+      - easypanel.expose.port=3001
+
+  frontend:
+    build:
+      context: https://github.com/cataradu89/product-feed-centralization.git#main:frontend
+      nixpacks: {}
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.yourdomain.easypanel.host/api
+    restart: always
+    depends_on:
+      - backend
+    labels:
+      - easypanel.expose=true
+      - easypanel.expose.port=3000
+
+  mongo:
+    image: mongo:5.0
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+
+volumes:
+  mongo_data:
+  backend_data:
