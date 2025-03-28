@@ -47,9 +47,11 @@ services:
     restart: always
     volumes:
       - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=product-feed
 
 volumes:
   mongo_data:
