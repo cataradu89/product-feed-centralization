@@ -39,6 +39,7 @@ services:
     working_dir: /app
     environment:
       - NEXT_PUBLIC_API_URL=https://api.yourdomain.easypanel.host/api
+      - NEXT_PUBLIC_NODE_ENV=production
     volumes:
       - frontend_data:/app/.next
     depends_on:

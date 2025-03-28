@@ -30,20 +30,31 @@ import {
   Logout,
   Store as StoreIcon,
 } from '@mui/icons-material';
-import { authService } from '@/lib/api';
 import { toast } from 'react-hot-toast';
+import Link from 'next/link';
+import { authService } from '../../lib/api';
 
 const drawerWidth = 240;
 
 export default function DashboardLayout({ children }) {
-  const router = useRouter();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
 
   useEffect(() => {
-    // Check if user is logged in
+    // In production, always set a default admin user without checking login
+    if (process.env.NEXT_PUBLIC_NODE_ENV === 'production') {
+      setUser({
+        username: 'admin',
+        email: 'admin@example.com',
+        role: 'admin'
+      });
+      return;
+    }
+
+    // In development, check if user is logged in
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
@@ -65,6 +76,12 @@ export default function DashboardLayout({ children }) {
   };
 
   const handleLogout = () => {
+    // In production, don't actually logout
+    if (process.env.NEXT_PUBLIC_NODE_ENV === 'production') {
+      handleMenuClose();
+      return;
+    }
+    
     authService.logout();
     toast.success('Logged out successfully');
     router.push('/login');

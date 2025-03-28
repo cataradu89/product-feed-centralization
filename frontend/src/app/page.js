@@ -9,7 +9,13 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in, redirect accordingly
+    // In production, always redirect to dashboard without login
+    if (process.env.NEXT_PUBLIC_NODE_ENV === 'production') {
+      router.push('/dashboard');
+      return;
+    }
+
+    // In development, check if user is logged in, redirect accordingly
     const user = authService.getCurrentUser();
     if (user) {
       router.push('/dashboard');
