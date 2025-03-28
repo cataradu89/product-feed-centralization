@@ -10,6 +10,23 @@ if (db.getUser('admin') == null) {
   });
 }
 
+// Create default application user if users collection is empty
+if (db.users.countDocuments() === 0) {
+  // Create hashed password (equivalent to "password123")
+  const hashedPassword = "$2a$10$XFMaFjL38jX.FPXLRIAcxeAYKzAfQrjQM4jO7OQw1kjlwlh9KR8zq";
+  
+  db.users.insertOne({
+    username: "admin",
+    email: "admin@example.com",
+    password: hashedPassword,
+    role: "admin",
+    createdAt: new Date(),
+    updatedAt: new Date()
+  });
+  
+  print("Default admin user created successfully");
+}
+
 // Sample data for stores
 const sampleStores = [
   {
@@ -115,5 +132,7 @@ db.products.createIndex({ campaign_name: 1 });
 db.feeds.createIndex({ url: 1 }, { unique: true });
 db.stores.createIndex({ name: 1 }, { unique: true });
 db.stores.createIndex({ domain: 1 });
+db.users.createIndex({ email: 1 }, { unique: true });
+db.users.createIndex({ username: 1 }, { unique: true });
 
 print("MongoDB initialization completed successfully");
