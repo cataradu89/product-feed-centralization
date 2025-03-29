@@ -40,7 +40,7 @@ services:
              npm start"
     working_dir: /app
     environment:
-      - NEXT_PUBLIC_API_URL=https://api.bolt-dbdetest.98ak0z.easypanel.host/api
+      - NEXT_PUBLIC_API_URL=https://api.bolt-dbdetest.98ak0z.easypanel.host
       - NEXT_PUBLIC_NODE_ENV=production
     volumes:
       - frontend_data:/app/.next
