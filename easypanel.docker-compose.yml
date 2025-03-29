@@ -14,9 +14,9 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - MONGODB_URI=mongodb://admin:password@mongo:27017/product-feed?authSource=admin
-      - JWT_SECRET=your_strong_secret_key_here
+      - JWT_SECRET=937a554795800a36e8f0f5e0b1649c35806c7c0d7f1b62400d8972cdb59071e5e3f1a8714e1fc0092004896e78a108181a597d3bf3c436377a5147ad0508d404e05e43df7189d6cd8889cff52a396d5c088c8bad80183fbe54fe37e10c2ffc9c91d837124ea9d4ea99400f2fa8400171430063c3887fec538d749ff816ff1482
       - JWT_EXPIRES_IN=7d
-      - CORS_ORIGIN=https://yourdomain.easypanel.host
+      - CORS_ORIGIN=https://bolt-dbdetest.98ak0z.easypanel.host
     volumes:
       - backend_data:/app/public
     depends_on:
@@ -38,7 +38,7 @@ services:
              npm start"
     working_dir: /app
     environment:
-      - NEXT_PUBLIC_API_URL=https://api.yourdomain.easypanel.host/api
+      - NEXT_PUBLIC_API_URL=https://api.bolt-dbdetest.98ak0z.easypanel.host/api
       - NEXT_PUBLIC_NODE_ENV=production
     volumes:
       - frontend_data:/app/.next
