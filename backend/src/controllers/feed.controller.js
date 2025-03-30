@@ -4,6 +4,7 @@ const csv = require('csv-parser');
 const { Readable } = require('stream');
 const Feed = require('../models/feed.model');
 const Product = require('../models/product.model');
+const cache = require('../utils/cache');
 
 // @desc    Create a new feed
 // @route   POST /api/feeds
@@ -24,6 +25,9 @@ const createFeed = asyncHandler(async (req, res) => {
     status: status !== undefined ? status : 1, // Default to active if not provided
     createdBy: req.user._id,
   });
+
+  // Clear feeds cache after creating a new feed
+  await cache.clearByPattern('feeds:*');
 
   if (feed) {
     res.status(201).json(feed);
@@ -84,6 +88,11 @@ const updateFeed = asyncHandler(async (req, res) => {
     feed.status = status !== undefined ? status : feed.status;
 
     const updatedFeed = await feed.save();
+
+    // Clear feed caches after updating
+    await cache.clearByPattern(`feed:*${req.params.id}*`);
+    await cache.clearByPattern('feeds:*');
+
     res.json(updatedFeed);
   } else {
     res.status(404);
@@ -109,6 +118,11 @@ const deleteFeed = asyncHandler(async (req, res) => {
     
     // Delete the feed
     await feed.remove();
+
+    // Clear feed caches after deleting
+    await cache.clearByPattern(`feed:*${req.params.id}*`);
+    await cache.clearByPattern('feeds:*');
+
     res.json({ message: 'Feed removed' });
   } else {
     res.status(404);
@@ -244,6 +258,11 @@ const importFeed = asyncHandler(async (req, res) => {
     feed.importCount = feed.importCount + 1;
     await feed.save();
     
+    // Clear product and store caches after import
+    await cache.clearByPattern('products:*');
+    await cache.clearByPattern('stores:*');
+    await cache.clearByPattern(`feed:*${req.params.id}*`);
+    
     const message = errorCount > 0 
       ? `Feed imported with some errors: ${errorCount} products failed to import` 
       : 'Feed imported successfully';
@@ -319,6 +338,9 @@ const bulkImportFeeds = asyncHandler(async (req, res) => {
           status: feedData.status !== undefined ? feedData.status : 1, // Default to active
           createdBy: req.user._id,
         });
+
+        // Clear feeds cache after creating a new feed
+        await cache.clearByPattern('feeds:*');
 
         results.imported++;
       } catch (feedError) {

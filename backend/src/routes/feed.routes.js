@@ -8,6 +8,7 @@ const {
   importFeed,
   bulkImportFeeds
 } = require('../controllers/feed.controller');
+const cache = require('../utils/cache');
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ const router = express.Router();
 
 // Get all feeds and create new feed
 router.route('/')
-  .get(getFeeds)
+  .get(cache.middleware('feeds', 300), getFeeds)
   .post(createFeed);
 
 // Bulk import feeds from CSV
@@ -23,11 +24,11 @@ router.post('/bulk-import', bulkImportFeeds);
 
 // Get, update, and delete feed by ID
 router.route('/:id')
-  .get(getFeedById)
+  .get(cache.middleware('feed', 300), getFeedById)
   .put(updateFeed)
   .delete(deleteFeed);
 
-// Import products from feed
+// Import feed data
 router.post('/:id/import', importFeed);
 
 module.exports = router;

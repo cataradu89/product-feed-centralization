@@ -8,6 +8,7 @@ const axios = require('axios');
 const { promisify } = require('util');
 const writeFileAsync = promisify(fs.writeFile);
 const mkdirAsync = promisify(fs.mkdir);
+const cache = require('../utils/cache');
 
 // Utility function to extract domain from store name
 const extractDomain = (storeName) => {
@@ -23,105 +24,104 @@ const extractDomain = (storeName) => {
     return storeName.toLowerCase();
   }
   
-  // Otherwise append .com as a guess
-  return `${storeName.toLowerCase()}.com`;
+  // Default fallback
+  return null;
 };
 
 // Get all unique campaign_names (stores) with product counts
-router.get('/', async (req, res) => {
+router.get('/', cache.middleware('stores', 300), async (req, res) => {
   try {
     // Get all stores from the Store collection, or create if not exist
     let stores = await Store.find().sort({ productCount: -1 });
     
-    // If no stores or refresh requested, rebuild from products
-    if (stores.length === 0 || req.query.refresh === 'true') {
-      const productStores = await Product.aggregate([
-        // Group by campaign_name
-        { 
-          $group: { 
-            _id: "$campaign_name", 
-            count: { $sum: 1 } 
-          } 
+    if (stores.length === 0) {
+      // If no stores exist, create them from product data
+      const storeData = await Product.aggregate([
+        {
+          $group: {
+            _id: '$campaign_name',
+            productCount: { $sum: 1 },
+            lastUpdated: { $max: '$lastUpdated' }
+          }
         },
-        // Sort by count descending
-        { $sort: { count: -1 } },
-        // Format output
-        { 
-          $project: { 
-            _id: 0, 
-            name: "$_id", 
-            productCount: "$count" 
-          } 
-        }
+        { $sort: { productCount: -1 } }
       ]);
       
-      // Update or create store records
-      for (const store of productStores) {
-        await Store.findOneAndUpdate(
-          { name: store.name },
-          { 
-            name: store.name,
-            domain: extractDomain(store.name),
-            productCount: store.productCount,
-            $setOnInsert: { 
-              createdAt: new Date() 
-            }
-          },
-          { upsert: true, new: true }
-        );
-      }
+      // Create store documents
+      const storePromises = storeData.map(async (store) => {
+        const domain = extractDomain(store._id);
+        
+        return Store.create({
+          name: store._id,
+          domain,
+          productCount: store.productCount,
+          lastUpdated: store.lastUpdated
+        });
+      });
       
-      // Fetch the updated store list
-      stores = await Store.find().sort({ productCount: -1 });
+      stores = await Promise.all(storePromises);
     }
     
-    return res.status(200).json(stores);
+    res.json(stores);
   } catch (error) {
     console.error('Error fetching stores:', error);
-    return res.status(500).json({ 
-      message: 'Server error while fetching stores', 
-      error: error.message 
-    });
+    res.status(500).json({ message: 'Error fetching stores', error: error.message });
   }
 });
 
 // Get products for a specific store
-router.get('/:name/products', async (req, res) => {
+router.get('/:storeName/products', cache.middleware('store-products', 300), async (req, res) => {
   try {
-    const { name } = req.params;
-    const { limit = 10, skip = 0 } = req.query;
-
-    const total = await Product.countDocuments({ campaign_name: name });
-    const products = await Product.find({ campaign_name: name })
-      .sort({ lastUpdated: -1 })
-      .skip(parseInt(skip))
+    const { storeName } = req.params;
+    const { page = 1, limit = 20, sort = 'lastUpdated', order = 'desc' } = req.query;
+    
+    const skip = (page - 1) * limit;
+    const sortOrder = order === 'asc' ? 1 : -1;
+    const sortOptions = {};
+    sortOptions[sort] = sortOrder;
+    
+    const products = await Product.find({ campaign_name: storeName })
+      .sort(sortOptions)
+      .skip(skip)
       .limit(parseInt(limit));
-
-    return res.status(200).json({
-      total,
+    
+    const total = await Product.countDocuments({ campaign_name: storeName });
+    
+    res.json({
       products,
-      limit: parseInt(limit),
-      skip: parseInt(skip)
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
     });
   } catch (error) {
-    console.error(`Error fetching products for store ${req.params.name}:`, error);
-    return res.status(500).json({ 
-      message: 'Server error while fetching store products', 
-      error: error.message 
-    });
+    console.error('Error fetching store products:', error);
+    res.status(500).json({ message: 'Error fetching store products', error: error.message });
   }
 });
 
-// Generate and save favicon for a store
-router.post('/:id/favicon', async (req, res) => {
+// Generate favicon for a specific store
+router.post('/:storeId/generate-favicon', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { storeId } = req.params;
     const { size = 128 } = req.body;
     
     // Find the store
-    const store = await Store.findById(id);
+    const store = await Store.findById(storeId);
     if (!store) {
       return res.status(404).json({ message: 'Store not found' });
+    }
+    
+    // Check if domain exists
+    if (!store.domain) {
+      // Try to extract domain from store name
+      const domain = extractDomain(store.name);
+      if (!domain) {
+        return res.status(400).json({ message: 'Cannot generate favicon: no domain available' });
+      }
+      
+      // Update store with domain
+      store.domain = domain;
+      await store.save();
     }
     
     // Create directory for favicons if it doesn't exist
@@ -134,51 +134,42 @@ router.post('/:id/favicon', async (req, res) => {
       }
     }
     
-    // Get domain to use for favicon
-    const domain = store.domain || extractDomain(store.name);
+    // Generate filename
+    const filename = `${store._id.toString()}.png`;
+    const filepath = path.join(faviconDir, filename);
     
-    // Generate favicon URL from Google API
+    // Fetch favicon from Google's favicon service
+    const domain = store.domain;
     const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
     
     try {
-      // Fetch the favicon
       const response = await axios.get(faviconUrl, { responseType: 'arraybuffer' });
-      
-      // Generate a unique filename
-      const filename = `${domain.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.png`;
-      const filepath = path.join(faviconDir, filename);
-      
-      // Save the favicon to disk
       await writeFileAsync(filepath, response.data);
       
-      // Store the direct Google Favicon URL for direct access
-      store.favicon = `/favicons/${filename}`;
-      store.faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
-      store.domain = domain;
+      // Update store with favicon info
+      store.favicon = filename;
+      store.faviconUrl = `/public/favicons/${filename}`;
       store.faviconGeneratedAt = new Date();
       await store.save();
       
-      return res.status(200).json({ 
+      // Clear cache for stores
+      await cache.clearByPattern('stores:*');
+      
+      res.json({
         message: 'Favicon generated successfully',
         store
       });
     } catch (error) {
-      console.error(`Error downloading favicon for ${domain}:`, error);
-      return res.status(400).json({ 
-        message: `Error downloading favicon: ${error.message}`, 
-        domain
-      });
+      console.error('Error fetching favicon:', error);
+      res.status(500).json({ message: 'Error generating favicon', error: error.message });
     }
   } catch (error) {
-    console.error('Error generating favicon:', error);
-    return res.status(500).json({ 
-      message: 'Server error while generating favicon',
-      error: error.message 
-    });
+    console.error('Error in generate-favicon:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Generate favicons for all stores without one
+// Generate favicons for all stores that don't have one
 router.post('/generate-all-favicons', async (req, res) => {
   try {
     const { size = 128 } = req.body;
@@ -187,10 +178,7 @@ router.post('/generate-all-favicons', async (req, res) => {
     const stores = await Store.find({ favicon: null });
     
     if (stores.length === 0) {
-      return res.status(200).json({ 
-        message: 'No stores without favicons found',
-        count: 0
-      });
+      return res.json({ message: 'No stores without favicons found' });
     }
     
     // Create directory for favicons if it doesn't exist
@@ -203,59 +191,59 @@ router.post('/generate-all-favicons', async (req, res) => {
       }
     }
     
-    let successCount = 0;
-    let errorCount = 0;
-    const errors = [];
-    
     // Process each store
+    const results = [];
     for (const store of stores) {
       try {
-        // Get domain to use for favicon
-        const domain = store.domain || extractDomain(store.name);
+        // Skip if no domain
+        if (!store.domain) {
+          // Try to extract domain from store name
+          const domain = extractDomain(store.name);
+          if (!domain) {
+            results.push({ store: store.name, status: 'skipped', reason: 'No domain available' });
+            continue;
+          }
+          
+          // Update store with domain
+          store.domain = domain;
+          await store.save();
+        }
         
-        // Generate favicon URL from Google API
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
-        
-        // Fetch the favicon
-        const response = await axios.get(faviconUrl, { responseType: 'arraybuffer' });
-        
-        // Generate a unique filename
-        const filename = `${domain.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.png`;
+        // Generate filename
+        const filename = `${store._id.toString()}.png`;
         const filepath = path.join(faviconDir, filename);
         
-        // Save the favicon to disk
+        // Fetch favicon from Google's favicon service
+        const domain = store.domain;
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
+        
+        const response = await axios.get(faviconUrl, { responseType: 'arraybuffer' });
         await writeFileAsync(filepath, response.data);
         
-        // Store the direct Google Favicon URL for direct access
-        store.favicon = `/favicons/${filename}`;
-        store.faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
-        store.domain = domain;
+        // Update store with favicon info
+        store.favicon = filename;
+        store.faviconUrl = `/public/favicons/${filename}`;
         store.faviconGeneratedAt = new Date();
         await store.save();
         
-        successCount++;
+        results.push({ store: store.name, status: 'success' });
       } catch (error) {
         console.error(`Error generating favicon for ${store.name}:`, error);
-        errorCount++;
-        errors.push({
-          storeName: store.name,
-          error: error.message
-        });
+        results.push({ store: store.name, status: 'error', error: error.message });
       }
     }
     
-    return res.status(200).json({
-      message: `Generated favicons for ${successCount} stores with ${errorCount} errors`,
-      successCount,
-      errorCount,
-      errors
+    // Clear cache for stores
+    await cache.clearByPattern('stores:*');
+    
+    res.json({
+      message: 'Favicon generation completed',
+      total: stores.length,
+      results
     });
   } catch (error) {
-    console.error('Error generating favicons:', error);
-    return res.status(500).json({ 
-      message: 'Server error while generating favicons',
-      error: error.message 
-    });
+    console.error('Error in generate-all-favicons:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
