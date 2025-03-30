@@ -4,7 +4,9 @@ WORKDIR /app
 
 COPY package*.json ./
 
+# Instalăm dependențele, inclusiv Redis
 RUN npm install
+RUN npm install redis
 
 COPY . .
 

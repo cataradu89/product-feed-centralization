@@ -3,7 +3,10 @@ const { promisify } = require('util');
 
 // Create Redis client
 const redisUrl = process.env.REDIS_URI || 'redis://localhost:6379';
-const client = redis.createClient(redisUrl);
+const client = redis.createClient({
+  url: redisUrl,
+  legacyMode: true
+});
 
 // Handle Redis connection errors
 client.on('error', (err) => {
@@ -14,11 +17,15 @@ client.on('connect', () => {
   console.log('Connected to Redis server');
 });
 
+// Connect to Redis
+client.connect().catch(console.error);
+
 // Promisify Redis commands
 const getAsync = promisify(client.get).bind(client);
 const setAsync = promisify(client.set).bind(client);
 const delAsync = promisify(client.del).bind(client);
-const flushAsync = promisify(client.flushall).bind(client);
+const flushAsync = promisify(client.flushAll).bind(client);
+const keysAsync = promisify(client.keys).bind(client);
 
 // Cache middleware
 const cache = {
@@ -113,7 +120,7 @@ const cache = {
   async clearByPattern(pattern) {
     try {
       // Get all keys
-      const keys = await promisify(client.keys).bind(client)(pattern);
+      const keys = await keysAsync(pattern);
       
       // Delete all keys matching the pattern
       if (keys.length > 0) {

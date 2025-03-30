@@ -7,17 +7,19 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "3001:3001" 
+      - "3001:3001"
     environment:
       - NODE_ENV=development
       - PORT=3001
       - MONGODB_URI=mongodb://mongodb:27017/feedsdb
       - JWT_SECRET=your_jwt_secret_key_change_in_production
+      - REDIS_URI=redis://redis:6379
     volumes:
       - ./backend:/app
       - /app/node_modules
     depends_on:
       - mongodb
+      - redis
     restart: unless-stopped
 
   # Frontend Next.js service
@@ -43,7 +45,20 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    command: --wiredTigerCacheSizeGB 1
+    restart: unless-stopped
+
+  # Redis service for caching
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     restart: unless-stopped
 
 volumes:
   mongodb_data:
+  redis_data:

@@ -41,10 +41,18 @@ const createFeed = asyncHandler(async (req, res) => {
 // @route   GET /api/feeds
 // @access  Private
 const getFeeds = asyncHandler(async (req, res) => {
-  const feeds = await Feed.find({ createdBy: req.user._id })
-    .sort({ createdAt: -1 });
-  
-  res.json(feeds);
+  try {
+    // Optimizăm interogarea pentru a include doar câmpurile necesare
+    const feeds = await Feed.find({ createdBy: req.user._id })
+      .select('name url status lastImport productCount createdAt updatedAt')
+      .lean()  // Convertim rezultatul în obiecte JavaScript simple pentru performanță mai bună
+      .sort({ createdAt: -1 });
+    
+    res.json(feeds);
+  } catch (error) {
+    console.error('Error in getFeeds:', error);
+    res.status(500).json({ message: 'Error fetching feeds' });
+  }
 });
 
 // @desc    Get feed by ID

@@ -1,8 +1,13 @@
 services:
   backend:
     build:
-      context: https://github.com/cataradu89/product-feed-centralization.git#main:backend
-      nixpacks: {}
+      context: .
+      nixpacks:
+        providers:
+          - node
+        config:
+          cmds:
+            - cd backend && npm install && npm start
     environment:
       - NODE_ENV=production
       - PORT=3001
@@ -10,21 +15,29 @@ services:
       - JWT_SECRET=your_strong_secret_key_here
       - JWT_EXPIRES_IN=7d
       - CORS_ORIGIN=https://yourdomain.easypanel.host
+      - REDIS_URI=redis://redis:6379
     volumes:
-      - backend_data:/app/public
+      - backend_data:/app/backend/public
     restart: always
     depends_on:
       - mongo
+      - redis
     labels:
       - easypanel.expose=true
       - easypanel.expose.port=3001
 
   frontend:
     build:
-      context: https://github.com/cataradu89/product-feed-centralization.git#main:frontend
-      nixpacks: {}
+      context: .
+      nixpacks:
+        providers:
+          - node
+        config:
+          cmds:
+            - cd frontend && npm install && npm run build && npm start
     environment:
       - NEXT_PUBLIC_API_URL=https://api.yourdomain.easypanel.host/api
+      - NEXT_PUBLIC_NODE_ENV=production
     restart: always
     depends_on:
       - backend
@@ -34,13 +47,24 @@ services:
 
   mongo:
     image: mongo:5.0
+    restart: always
     volumes:
       - mongo_data:/data/db
-    restart: always
+      - ./mongo-init:/docker-entrypoint-initdb.d
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=product-feed
+    command: --wiredTigerCacheSizeGB 1
+
+  redis:
+    image: redis:alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
 
 volumes:
   mongo_data:
   backend_data:
+  redis_data:

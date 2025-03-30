@@ -151,50 +151,64 @@ const deleteProduct = asyncHandler(async (req, res) => {
 // @route   GET /api/products/stats
 // @access  Private
 const getProductStats = asyncHandler(async (req, res) => {
-  // Get all feeds belonging to the user
-  const userFeeds = await Feed.find({ createdBy: req.user._id }).select('_id');
-  const userFeedIds = userFeeds.map(feed => feed._id);
-  
-  // Get total product count
-  const totalProducts = await Product.countDocuments({ 
-    feedId: { $in: userFeedIds } 
-  });
-  
-  // Get active product count
-  const activeProducts = await Product.countDocuments({ 
-    feedId: { $in: userFeedIds },
-    product_active: 1
-  });
-  
-  // Get inactive product count
-  const inactiveProducts = await Product.countDocuments({ 
-    feedId: { $in: userFeedIds },
-    product_active: 0
-  });
-  
-  // Get product count by category
-  const categoryCounts = await Product.aggregate([
-    { $match: { feedId: { $in: userFeedIds } } },
-    { $group: { _id: '$category', count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-    { $limit: 10 }
-  ]);
-  
-  // Get product count by brand
-  const brandCounts = await Product.aggregate([
-    { $match: { feedId: { $in: userFeedIds } } },
-    { $group: { _id: '$brand', count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-    { $limit: 10 }
-  ]);
-  
-  res.json({
-    totalProducts,
-    activeProducts,
-    inactiveProducts,
-    categoryCounts,
-    brandCounts
-  });
+  try {
+    // Get all feeds belonging to the user
+    const userFeeds = await Feed.find({ createdBy: req.user._id }).select('_id');
+    const userFeedIds = userFeeds.map(feed => feed._id);
+    
+    // Utilizăm o singură interogare agregată pentru a obține toate statisticile
+    const aggregationResults = await Product.aggregate([
+      { $match: { feedId: { $in: userFeedIds } } },
+      {
+        $facet: {
+          // Calculăm totalul de produse
+          totalCount: [
+            { $count: "count" }
+          ],
+          // Calculăm produsele active
+          activeCount: [
+            { $match: { product_active: 1 } },
+            { $count: "count" }
+          ],
+          // Calculăm produsele inactive
+          inactiveCount: [
+            { $match: { product_active: 0 } },
+            { $count: "count" }
+          ],
+          // Grupăm după categorie
+          categoryStats: [
+            { $group: { _id: "$category", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+          ],
+          // Grupăm după brand
+          brandStats: [
+            { $group: { _id: "$brand", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+          ]
+        }
+      }
+    ]);
+    
+    // Extragem rezultatele din agregare
+    const totalProducts = aggregationResults[0].totalCount[0]?.count || 0;
+    const activeProducts = aggregationResults[0].activeCount[0]?.count || 0;
+    const inactiveProducts = aggregationResults[0].inactiveCount[0]?.count || 0;
+    const categoryCounts = aggregationResults[0].categoryStats || [];
+    const brandCounts = aggregationResults[0].brandStats || [];
+    
+    res.json({
+      totalProducts,
+      activeProducts,
+      inactiveProducts,
+      categoryCounts,
+      brandCounts
+    });
+  } catch (error) {
+    console.error('Error in getProductStats:', error);
+    res.status(500).json({ message: 'Error fetching product statistics' });
+  }
 });
 
 module.exports = {

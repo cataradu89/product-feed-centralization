@@ -5,10 +5,10 @@ services:
     command: >
       sh -c "cd /app && 
              apk add --no-cache git && 
-             rm -rf /tmp/repo &&
              git clone --depth 1 https://github.com/cataradu89/product-feed-centralization.git /tmp/repo && 
              cp -r /tmp/repo/backend/* /app/ && 
              npm install && 
+             npm install redis && 
              npm start"
     working_dir: /app
     environment:
@@ -18,10 +18,12 @@ services:
       - JWT_SECRET=937a554795800a36e8f0f5e0b1649c35806c7c0d7f1b62400d8972cdb59071e5e3f1a8714e1fc0092004896e78a108181a597d3bf3c436377a5147ad0508d404e05e43df7189d6cd8889cff52a396d5c088c8bad80183fbe54fe37e10c2ffc9c91d837124ea9d4ea99400f2fa8400171430063c3887fec538d749ff816ff1482
       - JWT_EXPIRES_IN=7d
       - CORS_ORIGIN=https://bolt-dbdetest.98ak0z.easypanel.host
+      - REDIS_URI=redis://redis:6379
     volumes:
       - backend_data:/app/public
     depends_on:
       - mongo
+      - redis
     labels:
       - easypanel.expose=true
       - easypanel.expose.port=3001
@@ -32,7 +34,6 @@ services:
     command: >
       sh -c "cd /app && 
              apk add --no-cache git && 
-             rm -rf /tmp/repo &&
              git clone --depth 1 https://github.com/cataradu89/product-feed-centralization.git /tmp/repo && 
              cp -r /tmp/repo/frontend/* /app/ && 
              npm install && 
@@ -60,8 +61,17 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=password
       - MONGO_INITDB_DATABASE=product-feed
+    command: --wiredTigerCacheSizeGB 1
+
+  redis:
+    image: redis:alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
 
 volumes:
   mongo_data:
   backend_data:
   frontend_data:
+  redis_data:

@@ -127,12 +127,34 @@ if (db.products.countDocuments() === 0) {
 }
 
 // Create indexes for better performance
+// Products collection indexes
 db.products.createIndex({ url: 1 }, { unique: true });
 db.products.createIndex({ campaign_name: 1 });
+db.products.createIndex({ title: 1 });
+db.products.createIndex({ subcategory: 1 });
+db.products.createIndex({ price: 1 });
+db.products.createIndex({ createdAt: -1 });
+db.products.createIndex({ lastUpdated: -1 });
+db.products.createIndex({ campaign_name: 1, subcategory: 1 }); // Composite index for filtering by store and category
+db.products.createIndex({ campaign_name: 1, price: 1 }); // Composite index for filtering and sorting by price
+
+// Feeds collection indexes
 db.feeds.createIndex({ url: 1 }, { unique: true });
+db.feeds.createIndex({ status: 1 });
+db.feeds.createIndex({ lastImport: 1 });
+db.feeds.createIndex({ createdAt: -1 });
+db.feeds.createIndex({ updatedAt: -1 });
+
+// Stores collection indexes
 db.stores.createIndex({ name: 1 }, { unique: true });
 db.stores.createIndex({ domain: 1 });
+db.stores.createIndex({ productCount: -1 }); // For sorting by product count
+db.stores.createIndex({ lastUpdated: -1 }); // For sorting by last updated
+db.stores.createIndex({ createdAt: -1 }); // For sorting by creation date
+
+// Users collection indexes
 db.users.createIndex({ email: 1 }, { unique: true });
 db.users.createIndex({ username: 1 }, { unique: true });
+db.users.createIndex({ role: 1 });
 
 print("MongoDB initialization completed successfully");
