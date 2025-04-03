@@ -29,6 +29,7 @@ import {
   AccountCircle,
   Logout,
   Store as StoreIcon,
+  History as HistoryIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
@@ -92,6 +93,7 @@ export default function DashboardLayout({ children }) {
     { name: 'Feeds', icon: <FeedIcon />, path: '/dashboard/feeds' },
     { name: 'Stores', icon: <StoreIcon />, path: '/dashboard/stores' },
     { name: 'Products', icon: <CategoryIcon />, path: '/dashboard/products' },
+    { name: 'Feed Import', icon: <HistoryIcon />, path: '/dashboard/feed-imports' },
   ];
 
   const drawer = (

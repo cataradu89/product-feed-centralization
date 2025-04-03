@@ -47,6 +47,7 @@ import {
 import { feedService } from '../../../lib/api';
 import { toast } from 'react-hot-toast';
 import BulkImportFeeds from '../components/BulkImportFeeds';
+import { useRouter } from 'next/navigation';
 
 export default function FeedsPage() {
   const [feeds, setFeeds] = useState([]);
@@ -77,6 +78,7 @@ export default function FeedsPage() {
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('name');
   const [shouldStopImport, setShouldStopImport] = useState(false);
+  const router = useRouter();
 
   // Fetch feeds on component mount
   useEffect(() => {
@@ -196,6 +198,56 @@ export default function FeedsPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Reset import status
+      setImportStatus({
+        isImporting: false,
+        currentFeed: null,
+        progress: 0,
+        message: '',
+        inBackground: false,
+        currentIndex: 0,
+        totalFeeds: 0,
+        errors: [],
+        success: [],
+      });
+      
+      fetchFeeds(); // Refresh feeds list to update lastImported timestamp
+    } catch (error) {
+      console.error(`Error importing feed ${feed.name}:`, error);
+      setImportStatus(prev => ({
+        ...prev,
+        isImporting: false,
+        currentFeed: null,
+        progress: 0,
+        message: '',
+        errors: [...prev.errors, feed.name],
+      }));
+      showSnackbar(`Failed to import feed: ${error.response?.data?.message || error.message}`, 'error');
+    }
+  };
+
+  const importFeed = async (feed) => {
+    try {
+      setImportStatus(prev => ({
+        ...prev,
+        isImporting: true,
+        currentFeed: feed.name,
+        progress: 0,
+        message: `Starting import for ${feed.name}...`,
+      }));
+      
+      const response = await feedService.importFeed(feed._id);
+      
+      showSnackbar(`Import started for ${feed.name} and will run in the background`, 'success');
+      
+      // Redirecționăm către pagina de detalii a importului
+      if (response.importId) {
+        router.push(`/dashboard/feed-imports/${response.importId}`);
+      } else {
+        // Dacă nu avem un ID de import, redirecționăm către lista de importuri
+        router.push('/dashboard/feed-imports');
+      }
+      
+      // Resetăm starea importului
       setImportStatus({
         isImporting: false,
         currentFeed: null,
@@ -539,7 +591,11 @@ export default function FeedsPage() {
               ({importStatus.progress}% complete)
             </Typography>
           )}
-          <LinearProgress variant="determinate" value={importStatus.progress} sx={{ mt: 1, mb: 2 }} />
+          <LinearProgress 
+            variant="determinate" 
+            value={importStatus.progress} 
+            sx={{ mt: 1, mb: 2 }}
+          />
           <Button
             variant="contained"
             color="error"
@@ -629,7 +685,7 @@ export default function FeedsPage() {
                     <Tooltip title="Import Feed">
                       <IconButton
                         color="primary"
-                        onClick={() => importSingleFeed(feed)}
+                        onClick={() => importFeed(feed)}
                         disabled={importStatus.isImporting}
                       >
                         <ImportIcon />

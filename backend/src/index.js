@@ -12,6 +12,9 @@ const feedRoutes = require('./routes/feed.routes');
 const productRoutes = require('./routes/product.routes');
 const storeRoutes = require('./routes/store.routes');
 const storeRoutesV2 = require('./routes/store.routes.v2');
+const importHistoryRoutes = require('./routes/import-history.routes');
+const priceHistoryRoutes = require('./routes/price-history.routes');
+const userRoutes = require('./routes/user.routes');
 
 // Middleware
 const { errorHandler } = require('./middleware/error.middleware');
@@ -52,10 +55,13 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/feeds', authMiddleware, feedRoutes);
 app.use('/api/products', authMiddleware, productRoutes);
+productRoutes.use('/:id/price-history', priceHistoryRoutes);
 app.use('/api/stores', authMiddleware, storeRoutes);
 app.use('/api/stores/v2', authMiddleware, storeRoutesV2);
+app.use('/api/import-history', authMiddleware, importHistoryRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

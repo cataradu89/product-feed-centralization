@@ -102,11 +102,23 @@ export const feedService = {
     return response.data;
   },
   
+  // Import all active feeds
+  importAllFeeds: async () => {
+    const response = await api.post('/feeds/import-all');
+    return response.data;
+  },
+  
+  // Stop active imports
+  stopImport: async () => {
+    const response = await api.post('/feeds/stop-import');
+    return response.data;
+  },
+  
   // Bulk import feeds from CSV data
   bulkImportFeeds: async (feedsArray) => {
     const response = await api.post('/feeds/bulk-import', { feeds: feedsArray });
     return response.data;
-  },
+  }
 };
 
 // Product services
@@ -125,8 +137,13 @@ export const productService = {
   
   // Update product
   updateProduct: async (id, productData) => {
-    const response = await api.put(`/products/${id}`, productData);
-    return response.data;
+    try {
+      const response = await api.put(`/products/${id}`, productData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
   },
   
   // Delete product
@@ -140,6 +157,53 @@ export const productService = {
     const response = await api.get('/products/stats');
     return response.data;
   },
+  
+  // Get product price history
+  getProductPriceHistory: async (productId, timeframe = 'all') => {
+    try {
+      const response = await api.get(`/products/${productId}/price-history?timeframe=${timeframe}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching price history for product ${productId}:`, error);
+      throw error;
+    }
+  },
+};
+
+// Import history services
+export const importHistoryService = {
+  // Get all import history entries with optional filtering
+  getImportHistory: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    // Add filters to query params
+    if (params.feedId) queryParams.append('feedId', params.feedId);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await api.get(`/import-history${query}`);
+    return response.data;
+  },
+  
+  // Get import history by ID
+  getImportHistoryById: async (id) => {
+    const response = await api.get(`/import-history/${id}`);
+    return response.data;
+  },
+  
+  // Get global import status
+  getImportStatus: async () => {
+    const response = await api.get('/import-history/status');
+    return response.data;
+  },
+  
+  // Stop all active imports
+  stopAllImports: async () => {
+    const response = await api.post('/import-history/stop');
+    return response.data;
+  }
 };
 
 export default api;
