@@ -5,6 +5,7 @@ services:
     command: >
       sh -c "cd /app && 
              apk add --no-cache git && 
+             rm -rf /tmp/repo &&
              git clone --depth 1 https://github.com/cataradu89/product-feed-centralization.git /tmp/repo && 
              cp -r /tmp/repo/backend/* /app/ && 
              npm install && 
@@ -34,6 +35,7 @@ services:
     command: >
       sh -c "cd /app && 
              apk add --no-cache git && 
+             rm -rf /tmp/repo &&
              git clone --depth 1 https://github.com/cataradu89/product-feed-centralization.git /tmp/repo && 
              cp -r /tmp/repo/frontend/* /app/ && 
              npm install && 
