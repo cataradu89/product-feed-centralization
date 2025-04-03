@@ -3,15 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { format } from 'date-fns';
 import Link from 'next/link';
+import { format } from 'date-fns';
 import PriceHistoryDisplay from '@/components/PriceHistoryDisplay';
 
 const ProductDetailPage = () => {
@@ -117,8 +110,9 @@ const ProductDetailPage = () => {
     setEditFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSwitchChange = (checked) => {
-    setEditFormData(prev => ({ ...prev, product_active: checked }));
+  const handleCheckboxChange = (e) => {
+    const { name, checked } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: checked }));
   };
 
   const handleSave = async () => {
@@ -148,17 +142,22 @@ const ProductDetailPage = () => {
   };
 
   if (isLoading && !product) {
-    return <div>Loading product details...</div>;
+    return <div className="p-4">Loading product details...</div>;
   }
 
   if (!product) {
     return (
       <div className="container mx-auto p-4">
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error || 'Product not found.'}</AlertDescription>
-        </Alert>
-        <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error || 'Product not found.'}</span>
+        </div>
+        <button 
+          onClick={() => router.back()} 
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
+        >
+          Go Back
+        </button>
       </div>
     );
   }
@@ -166,119 +165,237 @@ const ProductDetailPage = () => {
   return (
     <div className="container mx-auto p-4 space-y-6">
       {error && !isEditing && (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle>{isEditing ? 'Edit Product' : product.title}</CardTitle>
-              <CardDescription>Product ID: {product._id}</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant={isEditing ? "secondary" : "default"} onClick={handleEditToggle}>
-                {isEditing ? 'Cancel' : 'Edit'}
-              </Button>
-              {isEditing && (
-                <Button onClick={handleSave} disabled={isLoading}>
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              )}
-              {!isEditing && (
-                <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
-                  {isLoading ? 'Deleting...' : 'Delete'}
-                </Button>
-              )}
-            </div>
+      <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">{isEditing ? 'Edit Product' : product.title}</h1>
+            <p className="text-gray-500">Product ID: {product._id}</p>
           </div>
-          {error && isEditing && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertTitle>Save Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex gap-2">
+            <button
+              onClick={handleEditToggle}
+              className={`py-2 px-4 rounded ${isEditing ? 'bg-gray-300 hover:bg-gray-400' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+            >
+              {isEditing ? 'Cancel' : 'Edit'}
+            </button>
+            {isEditing && (
+              <button
+                onClick={handleSave}
+                disabled={isLoading}
+                className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50"
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            )}
+            {!isEditing && (
+              <button
+                onClick={handleDelete}
+                disabled={isLoading}
+                className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded disabled:opacity-50"
+              >
+                {isLoading ? 'Deleting...' : 'Delete'}
+              </button>
+            )}
+          </div>
+        </div>
+        {error && isEditing && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            <strong className="font-bold">Save Error!</strong>
+            <span className="block sm:inline"> {error}</span>
+          </div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div>
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" name="title" value={editFormData.title || ''} onChange={handleInputChange} disabled={!isEditing} />
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <input
+                id="title"
+                name="title"
+                type="text"
+                value={editFormData.title || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              />
             </div>
             <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" name="description" value={editFormData.description || ''} onChange={handleInputChange} disabled={!isEditing} />
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                id="description"
+                name="description"
+                value={editFormData.description || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                rows="3"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="price">Price (RON)</Label>
-                <Input id="price" name="price" type="number" step="0.01" value={editFormData.price || ''} onChange={handleInputChange} disabled={!isEditing} />
+                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Price (RON)</label>
+                <input
+                  id="price"
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  value={editFormData.price || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                />
               </div>
               <div>
-                <Label htmlFor="old_price">Old Price (RON)</Label>
-                <Input id="old_price" name="old_price" type="number" step="0.01" value={editFormData.old_price || ''} onChange={handleInputChange} disabled={!isEditing} />
+                <label htmlFor="old_price" className="block text-sm font-medium text-gray-700 mb-1">Old Price (RON)</label>
+                <input
+                  id="old_price"
+                  name="old_price"
+                  type="number"
+                  step="0.01"
+                  value={editFormData.old_price || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                />
               </div>
             </div>
             <div>
-              <Label htmlFor="brand">Brand</Label>
-              <Input id="brand" name="brand" value={editFormData.brand || ''} onChange={handleInputChange} disabled={!isEditing} />
+              <label htmlFor="brand" className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+              <input
+                id="brand"
+                name="brand"
+                type="text"
+                value={editFormData.brand || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="sku">SKU</Label>
-                <Input id="sku" name="sku" value={editFormData.sku || ''} onChange={handleInputChange} disabled={!isEditing} />
+                <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                <input
+                  id="sku"
+                  name="sku"
+                  type="text"
+                  value={editFormData.sku || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                />
               </div>
               <div>
-                <Label htmlFor="ean">EAN</Label>
-                <Input id="ean" name="ean" value={editFormData.ean || ''} onChange={handleInputChange} disabled={!isEditing} />
+                <label htmlFor="ean" className="block text-sm font-medium text-gray-700 mb-1">EAN</label>
+                <input
+                  id="ean"
+                  name="ean"
+                  type="text"
+                  value={editFormData.ean || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="availability">Availability</Label>
-                <Input id="availability" name="availability" value={editFormData.availability || ''} onChange={handleInputChange} disabled={!isEditing} />
+                <label htmlFor="availability" className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+                <input
+                  id="availability"
+                  name="availability"
+                  type="text"
+                  value={editFormData.availability || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                />
               </div>
               <div>
-                <Label htmlFor="stock">Stock</Label>
-                <Input id="stock" name="stock" type="number" value={editFormData.stock || ''} onChange={handleInputChange} disabled={!isEditing} />
+                <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                <input
+                  id="stock"
+                  name="stock"
+                  type="number"
+                  value={editFormData.stock || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                />
               </div>
             </div>
             <div>
-              <Label htmlFor="category">Category</Label>
-              <Input id="category" name="category" value={editFormData.category || ''} onChange={handleInputChange} disabled={!isEditing} />
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <input
+                id="category"
+                name="category"
+                type="text"
+                value={editFormData.category || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              />
             </div>
             <div>
-              <Label htmlFor="store">Store</Label>
-              <Input id="store" name="store" value={editFormData.store || ''} onChange={handleInputChange} disabled={!isEditing} />
+              <label htmlFor="store" className="block text-sm font-medium text-gray-700 mb-1">Store</label>
+              <input
+                id="store"
+                name="store"
+                type="text"
+                value={editFormData.store || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              />
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="url">Product URL</Label>
-              <Input id="url" name="url" value={editFormData.url || ''} onChange={handleInputChange} disabled={!isEditing} />
+              <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">Product URL</label>
+              <input
+                id="url"
+                name="url"
+                type="text"
+                value={editFormData.url || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              />
               {!isEditing && product.url && (
                 <a href={product.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm mt-1 block">Visit Product Page</a>
               )}
             </div>
             <div>
-              <Label htmlFor="image_url">Image URL</Label>
-              <Input id="image_url" name="image_url" value={editFormData.image_url || ''} onChange={handleInputChange} disabled={!isEditing} />
+              <label htmlFor="image_url" className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+              <input
+                id="image_url"
+                name="image_url"
+                type="text"
+                value={editFormData.image_url || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+              />
               {!isEditing && product.image_url && (
                 <img src={product.image_url} alt={product.title} className="mt-2 max-h-40 rounded" />
               )}
             </div>
             <div className="flex items-center space-x-2 pt-2">
-              <Switch
+              <input
                 id="product_active"
+                name="product_active"
+                type="checkbox"
                 checked={editFormData.product_active}
-                onCheckedChange={handleSwitchChange}
+                onChange={handleCheckboxChange}
                 disabled={!isEditing}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <Label htmlFor="product_active">Product Active</Label>
+              <label htmlFor="product_active" className="text-sm font-medium text-gray-700">Product Active</label>
             </div>
             {!isEditing && (
               <div className="text-sm text-gray-500 space-y-1 pt-4">
@@ -289,13 +406,13 @@ const ProductDetailPage = () => {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Secțiunea Istoric Prețuri */}
       <div className="mt-6">
         {isHistoryLoading ? (
-          <p>Loading price history...</p>
+          <p className="p-4">Loading price history...</p>
         ) : (
           <PriceHistoryDisplay history={priceHistory} />
         )}
