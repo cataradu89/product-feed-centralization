@@ -1,7 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { format } from 'date-fns';
+
+// Funcție pentru formatarea datelor fără a folosi date-fns
+const formatDate = (date) => {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
 
 const PriceHistoryDisplay = ({ history = [] }) => {
   const [timeframe, setTimeframe] = useState('all');
@@ -130,7 +141,7 @@ const PriceHistoryDisplay = ({ history = [] }) => {
                 return (
                   <tr key={entry._id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(entry.timestamp), 'dd/MM/yyyy HH:mm')}
+                      {formatDate(entry.timestamp)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                       {entry.price.toFixed(2)} RON

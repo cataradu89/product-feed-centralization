@@ -4,8 +4,19 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
-import { format } from 'date-fns';
 import PriceHistoryDisplay from '@/components/PriceHistoryDisplay';
+
+// Funcție pentru formatarea datelor fără a folosi date-fns
+const formatDate = (date) => {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
 
 const ProductDetailPage = () => {
   const router = useRouter();
@@ -401,8 +412,8 @@ const ProductDetailPage = () => {
               <div className="text-sm text-gray-500 space-y-1 pt-4">
                 <p>Feed: <Link href={`/dashboard/feeds/${product.feedId?._id}`} className="text-blue-600 hover:underline">{product.feedId?.name || 'N/A'}</Link></p>
                 <p>Created By: {product.createdBy?.name || 'N/A'} ({product.createdBy?.email || 'N/A'})</p>
-                <p>Created At: {format(new Date(product.createdAt), 'dd/MM/yyyy HH:mm')}</p>
-                <p>Last Updated: {format(new Date(product.lastUpdated), 'dd/MM/yyyy HH:mm')}</p>
+                <p>Created At: {formatDate(product.createdAt)}</p>
+                <p>Last Updated: {formatDate(product.lastUpdated)}</p>
               </div>
             )}
           </div>
