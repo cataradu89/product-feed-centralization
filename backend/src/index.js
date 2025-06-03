@@ -15,6 +15,7 @@ const storeRoutesV2 = require('./routes/store.routes.v2');
 const importHistoryRoutes = require('./routes/import-history.routes');
 const priceHistoryRoutes = require('./routes/price-history.routes');
 const userRoutes = require('./routes/user.routes');
+const typesenseRoutes = require('./routes/typesense.routes');
 
 // Middleware
 const { errorHandler } = require('./middleware/error.middleware');
@@ -62,6 +63,8 @@ productRoutes.use('/:id/price-history', priceHistoryRoutes);
 app.use('/api/stores', authMiddleware, storeRoutes);
 app.use('/api/stores/v2', authMiddleware, storeRoutesV2);
 app.use('/api/import-history', authMiddleware, importHistoryRoutes);
+// Typesense endpoint - public, no auth required
+app.use('/api/typesense', typesenseRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
